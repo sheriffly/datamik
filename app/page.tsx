@@ -66,9 +66,12 @@ export default function Home() {
         </p>
 
         <div className="mt-8 flex gap-4">
-          <button className="px-6 py-3 bg-black text-white rounded-xl text-sm hover:opacity-80 transition">
+          <Link
+            href="/companies"
+            className="px-6 py-3 bg-black text-white rounded-xl text-sm hover:opacity-80 transition"
+          >
             Explore Companies
-          </button>
+          </Link>
 
           <button className="px-6 py-3 border rounded-xl text-sm hover:bg-black hover:text-white transition">
             Add Company
