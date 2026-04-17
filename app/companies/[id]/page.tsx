@@ -11,6 +11,7 @@ type Company = {
   domain: string
   industry: string | null
   description: string | null
+  claimed_by?: string | null
 }
 
 const normalizeDomain = (domain: string) =>
@@ -21,12 +22,19 @@ const normalizeDomain = (domain: string) =>
     .replace('http://', '')
     .replace('www.', '')
 
+const getEmailDomain = (email: string) => {
+  return email.split('@')[1]?.toLowerCase()
+}
+
 export default function CompanyDetailPage() {
   const params = useParams<{ id: string }>()
+
   const [company, setCompany] = useState<Company | null>(null)
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  // Fetch company
   useEffect(() => {
     const fetchCompany = async () => {
       setLoading(true)
@@ -40,7 +48,7 @@ export default function CompanyDetailPage() {
 
       const { data, error: fetchError } = await supabase
         .from('companies')
-        .select('id, name, domain, industry, description')
+        .select('id, name, domain, industry, description, claimed_by')
         .eq('id', params.id)
         .maybeSingle()
 
@@ -57,8 +65,43 @@ export default function CompanyDetailPage() {
     fetchCompany()
   }, [params?.id])
 
+  // Fetch user
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+    })
+  }, [])
+
   const normalizedDomain = company ? normalizeDomain(company.domain) : ''
   const websiteUrl = normalizedDomain ? `https://${normalizedDomain}` : ''
+
+  const userDomain = user?.email ? getEmailDomain(user.email) : ''
+
+  const isEligible =
+    user &&
+    normalizedDomain &&
+    userDomain === normalizedDomain
+
+  const isAlreadyClaimed = !!company?.claimed_by
+
+  const handleClaim = async () => {
+    if (!user || !company) return
+
+    const { error } = await supabase
+      .from('companies')
+      .update({
+        claimed_by: user.id,
+        claim_status: 'claimed',
+      })
+      .eq('id', company.id)
+
+    if (error) {
+      alert(error.message)
+    } else {
+      alert('Company claimed successfully!')
+      setCompany({ ...company, claimed_by: user.id })
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-black">
@@ -94,9 +137,41 @@ export default function CompanyDetailPage() {
               {company.name}
             </h1>
 
+            {/* CLAIM UI */}
+            <div className="mt-2">
+              {!user && (
+                <p className="text-sm text-gray-500">
+                  Log in to claim this company.
+                </p>
+              )}
+
+              {user && isAlreadyClaimed && (
+                <p className="text-sm text-gray-500">
+                  This company has already been claimed.
+                </p>
+              )}
+
+              {user && !isAlreadyClaimed && !isEligible && (
+                <p className="text-sm text-gray-500">
+                  You are not eligible to claim this company.
+                </p>
+              )}
+
+              {user && !isAlreadyClaimed && isEligible && (
+                <button
+                  onClick={handleClaim}
+                  className="mt-2 rounded-lg border border-black px-4 py-2 text-sm transition hover:bg-black hover:text-white"
+                >
+                  Claim this company
+                </button>
+              )}
+            </div>
+
             <div className="mt-6 space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-wide text-gray-400">Domain</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">
+                  Domain
+                </p>
                 {normalizedDomain ? (
                   <a
                     href={websiteUrl}
@@ -107,12 +182,16 @@ export default function CompanyDetailPage() {
                     {normalizedDomain}
                   </a>
                 ) : (
-                  <p className="text-sm text-gray-500">No domain available</p>
+                  <p className="text-sm text-gray-500">
+                    No domain available
+                  </p>
                 )}
               </div>
 
               <div className="border-t border-black/5 pt-4">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Industry</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">
+                  Industry
+                </p>
                 <p className="mt-1 text-sm">
                   {company.industry || 'Industry not specified'}
                 </p>
@@ -127,7 +206,9 @@ export default function CompanyDetailPage() {
                     {company.description}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-500">No description available.</p>
+                  <p className="text-sm text-gray-500">
+                    No description available.
+                  </p>
                 )}
               </div>
             </div>
