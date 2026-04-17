@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import Image from 'next/image'
+import Link from 'next/link'
 
 export default function Home() {
   const [user, setUser] = useState<any>(null)
@@ -27,25 +29,28 @@ export default function Home() {
     <main className="min-h-screen bg-white text-black flex flex-col items-center justify-between px-6 py-10">
 
       {/* NAVBAR */}
-      <div className="w-full max-w-5xl flex justify-between items-center">
-        <h1 className="text-lg font-medium tracking-tight">Datamik</h1>
+<div className="w-full max-w-5xl flex justify-between items-center">
+  <Link href="/" className="flex items-center gap-2">
+    <Image src="/logo.svg" alt="Datamik" width={26} height={26} />
+    <span className="text-lg font-medium tracking-tight">Datamik</span>
+  </Link>
 
-        {user ? (
-          <button
-            onClick={logout}
-            className="text-sm border px-4 py-2 rounded-lg hover:bg-black hover:text-white transition"
-          >
-            Logout
-          </button>
-        ) : (
-          <button
-            onClick={loginWithGoogle}
-            className="text-sm border px-4 py-2 rounded-lg hover:bg-black hover:text-white transition"
-          >
-            Login
-          </button>
-        )}
-      </div>
+  {user ? (
+    <button
+      onClick={logout}
+      className="text-sm border px-4 py-2 rounded-lg hover:bg-black hover:text-white transition"
+    >
+      Logout
+    </button>
+  ) : (
+    <button
+      onClick={loginWithGoogle}
+      className="text-sm border px-4 py-2 rounded-lg hover:bg-black hover:text-white transition"
+    >
+      Login
+    </button>
+  )}
+</div>
 
       {/* HERO */}
       <div className="flex flex-col items-center text-center max-w-2xl mt-24">

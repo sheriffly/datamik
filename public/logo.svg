@@ -1,0 +1,8 @@
+<svg width="288" height="288" viewBox="0 0 288 288" fill="none" xmlns="http://www.w3.org/2000/svg"><defs></defs>
+  <g filter="" opacity="1">
+    <rect x="0" y="0" width="288" height="288" rx="0" fill="#000000"/>
+    <g transform="translate(144, 144) rotate(0) translate(-115, -115) scale(9.583333333333334)">
+      <path fill="#FFFFFF" d="M16 6a3 3 0 1 1 2.524 2.962l-2.038 3.358a3 3 0 0 1-4.749 3.65l-3.741 1.87a3 3 0 1 1-.461-1.446l3.531-1.765a3 3 0 0 1 4.275-3.313l1.798-2.963A2.995 2.995 0 0 1 16 6Z"/>
+    </g>
+  </g>
+</svg>

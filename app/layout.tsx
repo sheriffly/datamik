@@ -6,8 +6,22 @@ import { JetBrains_Mono } from 'next/font/google'
 </head>
 
 export const metadata = {
-  title: 'Datamik — Structured Company Data',
-  description: 'Explore and manage structured company data in a clean, minimal interface.',
+  title: 'Datamik',
+  description: 'Structured company data platform',
+
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png' }
+    ],
+    other: [
+      { rel: 'icon', url: '/android-chrome-192x192.png' },
+      { rel: 'icon', url: '/android-chrome-512x512.png' },
+    ],
+  },
 }
 
 const jetbrains = JetBrains_Mono({
