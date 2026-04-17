@@ -11,6 +11,7 @@ type Company = {
   domain: string
   industry: string | null
   description: string | null
+  claim_status?: 'unclaimed' | 'pending' | 'claimed' | null
   claimed_by?: string | null
 }
 
@@ -48,7 +49,7 @@ export default function CompanyDetailPage() {
 
       const { data, error: fetchError } = await supabase
         .from('companies')
-        .select('id, name, domain, industry, description, claimed_by')
+        .select('id, name, domain, industry, description, claim_status, claimed_by')
         .eq('id', params.id)
         .maybeSingle()
 
@@ -77,12 +78,16 @@ export default function CompanyDetailPage() {
 
   const userDomain = user?.email ? getEmailDomain(user.email) : ''
 
-  const isEligible =
-    user &&
-    normalizedDomain &&
-    userDomain === normalizedDomain
+  const domainMatches =
+    Boolean(normalizedDomain) &&
+    Boolean(userDomain) &&
+    (userDomain === normalizedDomain || userDomain.endsWith(`.${normalizedDomain}`))
 
   const isAlreadyClaimed = !!company?.claimed_by
+  const isClaimed =
+    company?.claim_status === 'claimed' || Boolean(company?.claimed_by)
+  const isOwner = Boolean(user && company?.claimed_by === user.id)
+  const canClaim = Boolean(user && !isAlreadyClaimed && domainMatches)
 
   const handleClaim = async () => {
     if (!user || !company) return
@@ -99,7 +104,11 @@ export default function CompanyDetailPage() {
       alert(error.message)
     } else {
       alert('Company claimed successfully!')
-      setCompany({ ...company, claimed_by: user.id })
+      setCompany({
+        ...company,
+        claimed_by: user.id,
+        claim_status: 'claimed',
+      })
     }
   }
 
@@ -133,9 +142,28 @@ export default function CompanyDetailPage() {
 
         {!loading && !error && company && (
           <section className="rounded-xl border border-black/10 p-6 space-y-6">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {company.name}
-            </h1>
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {company.name}
+              </h1>
+              {isClaimed && (
+                <span className="rounded-full border border-black px-3 py-1 text-xs uppercase tracking-wide">
+                  Claimed
+                </span>
+              )}
+            </div>
+
+            {isOwner && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-black/10 p-4">
+                <p className="text-sm text-gray-700">You own this company</p>
+                <Link
+                  href={`/companies/${company.id}/edit`}
+                  className="rounded-lg border border-black px-4 py-2 text-sm transition hover:bg-black hover:text-white"
+                >
+                  Edit Company
+                </Link>
+              </div>
+            )}
 
             {/* CLAIM UI */}
             <div className="mt-2">
@@ -145,19 +173,19 @@ export default function CompanyDetailPage() {
                 </p>
               )}
 
-              {user && isAlreadyClaimed && (
+              {user && isAlreadyClaimed && !isOwner && (
                 <p className="text-sm text-gray-500">
                   This company has already been claimed.
                 </p>
               )}
 
-              {user && !isAlreadyClaimed && !isEligible && (
+              {user && !isAlreadyClaimed && !canClaim && (
                 <p className="text-sm text-gray-500">
                   You are not eligible to claim this company.
                 </p>
               )}
 
-              {user && !isAlreadyClaimed && isEligible && (
+              {canClaim && (
                 <button
                   onClick={handleClaim}
                   className="mt-2 rounded-lg border border-black px-4 py-2 text-sm transition hover:bg-black hover:text-white"
