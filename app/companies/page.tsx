@@ -9,7 +9,15 @@ type Company = {
   name: string
   domain: string
   industry: string | null
+  industries?: string[] | null
 }
+
+const formatIndustryLabel = (value: string) =>
+  value
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([])
@@ -23,7 +31,7 @@ export default function CompaniesPage() {
 
       const { data, error: fetchError } = await supabase
         .from('companies')
-        .select('id, name, domain, industry')
+        .select('id, name, domain, industry, industries')
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -91,7 +99,14 @@ export default function CompaniesPage() {
                   {company.domain.replace('www.', '')}
                 </p>
                 <p className="mt-2 text-sm opacity-70">
-                  {company.industry || 'Industry not specified'}
+                  {company.industries && company.industries.length > 0
+                    ? company.industries
+                        .slice(0, 2)
+                        .map((industry) => formatIndustryLabel(industry))
+                        .join(' · ')
+                    : company.industry
+                      ? formatIndustryLabel(company.industry)
+                      : 'Industry not specified'}
                 </p>
               </Link>
             ))}
