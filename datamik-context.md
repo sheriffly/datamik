@@ -1,4 +1,4 @@
-```md id="datamik_context_v2"
+```md id="datamik_context_v3"
 # Datamik Project Context
 
 ---
@@ -12,12 +12,14 @@ Datamik is a structured company data platform where users can:
 - View detailed company profiles
 - Claim ownership of company profiles via domain verification
 - Edit company data if they are the verified owner
+- Create and manage public user profiles
+- View public user profiles and their claimed companies
 
 The product focuses on:
 - Simplicity
 - Structured data
 - Ownership & trust
-- Minimal UI
+- Clean, minimal UI
 
 ---
 
@@ -25,6 +27,7 @@ The product focuses on:
 
 - Build a clean, reliable company database
 - Enable verified ownership via domain-based claims
+- Establish user identity and credibility
 - Prevent spam and unauthorized edits
 - Keep UI minimal, fast, and readable
 - Scale into a structured data platform (Crunchbase-lite)
@@ -59,8 +62,15 @@ edit/
 page.tsx            → Edit company (owner only)
 add-company/
 page.tsx                → Add company form
+profile/
+page.tsx                → Edit own profile
+u/
+[username]/
+page.tsx              → Public profile (SSR)
+loading.tsx           → Loading state
 lib/
-supabase.ts               → Supabase client
+supabase.ts               → Client-side Supabase
+profile.ts                → Username + URL helpers
 public/
 logos, favicon, assets
 datamik-context.md
@@ -74,56 +84,79 @@ datamik-context.md
 Using Supabase Auth.
 
 Supported methods:
-- Google OAuth (fast login)
-- Email Magic Link (universal login)
+- Google OAuth
+- Email Magic Link (OTP)
 
 User object is used for:
 - `created_by`
 - `claimed_by`
 
+Admin role:
+- Stored in `user.user_metadata.role`
+- Possible values:
+  - 'user'
+  - 'admin'
+
+(Currently admin is NOT used in core logic)
+
 ---
 
 ## 🗄️ Database (Supabase)
 
-### Main Table: `companies`
+### 1. `companies`
 
-### Fields:
+Core table for company data.
 
-- `id` (uuid, primary key)
-- `name` (text, required)
-- `domain` (text, unique, required)
-- `alias` (text[])
-- `short_description` (text)
-- `description` (text)
-
-### Location:
-- `city`
-- `country`
-
-### Classification:
+Key fields:
+- `id` (uuid)
+- `name`
+- `domain`
 - `industry`
-- `categories` (text[])
+- `description`
 
-### Company Info:
-- `founded_date`
-- `company_type`
-- `employee_count_range`
+Ownership:
+- `created_by`
+- `claimed_by`
+- `claim_status` ('unclaimed' | 'claimed')
 
-### Links:
-- `website_url`
-- `linkedin_url`
-
-### Ownership:
-- `created_by` (uuid)
-- `claimed_by` (uuid)
-- `claim_status` (unclaimed | pending | claimed)
-
-### Meta:
-- `is_verified`
-- `datamik_score`
-- `profile_views`
+Meta:
 - `created_at`
 - `updated_at`
+
+---
+
+### 2. `profiles`
+
+User identity layer.
+
+Fields:
+- `id` (uuid, references auth.users)
+- `username` (unique, lowercase)
+- `name`
+- `bio`
+- `avatar_url`
+- `website_url`
+- `social_links` (jsonb)
+- `created_at`
+- `updated_at`
+
+Constraints:
+- Username regex: `^[a-z0-9_]{3,30}$`
+- Unique index on `lower(username)`
+
+---
+
+### 3. `company_edit_logs`
+
+Audit log for edits.
+
+Fields:
+- `id`
+- `company_id`
+- `edited_by`
+- `previous_data` (jsonb)
+- `new_data` (jsonb)
+- `edited_at`
 
 ---
 
@@ -131,14 +164,22 @@ User object is used for:
 
 Row Level Security is ENABLED.
 
-Policies:
-
-- Public can SELECT companies
-- Authenticated users can INSERT companies
-- Only owner (`claimed_by`) can UPDATE company
+### Companies
+- Public can SELECT
+- Authenticated users can INSERT
+- Only owner (`claimed_by`) can UPDATE
 - Claim allowed only if:
   - user is logged in
   - company is unclaimed
+
+### Profiles
+- Public can SELECT
+- Users can INSERT their own profile
+- Users can UPDATE their own profile
+
+### Edit Logs
+- Authenticated users can INSERT logs
+- Logs are tied to `edited_by`
 
 ---
 
@@ -147,7 +188,9 @@ Policies:
 User → Add Company → Supabase → Companies Table  
 User → View Companies → Fetch → UI  
 User → Claim Company → Domain Match → Update claimed_by  
-Owner → Edit Company → Update DB  
+Owner → Edit Company → Update DB + Log changes  
+User → Create Profile → Profiles Table  
+Public → View Profile → Fetch profile + claimed companies  
 
 ---
 
@@ -157,25 +200,39 @@ Owner → Edit Company → Update DB
 - Google login
 - Email login (magic link)
 
-### ✅ Company Creation
+### ✅ Company System
 - Add Company form
-- Domain normalization
-- Validation
+- Companies listing
+- Company detail page
 
-### ✅ Companies Listing
-- Fetch from Supabase
-- Clean UI cards
-- Loading + empty states
-
-### ✅ Company Detail Page
-- Fetch single company
-- Structured UI
-- Clickable domain
-
-### ✅ Claim Company
+### ✅ Claim System
 - Domain-based eligibility
 - Claim button
 - Claimed state handling
+
+### ✅ Ownership UI
+- "Claimed" badge
+- Owner detection
+- Edit button (owner only)
+
+### ✅ Edit Company
+- Owner-only access
+- Pre-filled form
+- Update company data
+- Audit logging
+
+### ✅ Profiles System
+- Create/edit profile
+- Username validation
+- Website normalization
+- Avatar fallback
+
+### ✅ Public Profile Page
+- Route: `/u/[username]`
+- Server-side rendering (SSR)
+- SEO metadata
+- Claimed companies listing
+- Ownership-aware UI (Edit Profile button)
 
 ---
 
@@ -185,7 +242,10 @@ Owner → Edit Company → Update DB
 - Add company
 - View companies list
 - View company detail
-- Claim company (domain match)
+- Claim company
+- Edit company (owner)
+- Profile creation/edit
+- Public profile page
 
 ---
 
@@ -201,15 +261,8 @@ Owner → Edit Company → Update DB
 
 ## 📌 Current Features In Progress
 
-### 🔄 Ownership UI
-- Show "Claimed" badge
-- Show "You own this company"
-- Show Edit button for owner
-
-### 🔄 Edit Company
-- Owner-only access
-- Pre-filled form
-- Update company data
+- Linking company → owner profile UI
+- Improving mobile responsiveness across pages
 
 ---
 
@@ -222,17 +275,16 @@ Owner → Edit Company → Update DB
 
 Example:
 user: john@stripe.com  
-company: stripe.com → match → claim allowed
+company: stripe.com → claim allowed
 
 ---
 
-## 🧠 Coding Guidelines
+## 🧠 Profile System Logic
 
-- Write minimal, readable code
-- Use client components only when needed
-- Keep Supabase queries simple
-- Avoid deeply nested logic
-- Handle loading/error states properly
+- Username is unique identity
+- Stored in lowercase
+- Public profile accessible via `/u/[username]`
+- Profiles linked to companies via `claimed_by`
 
 ---
 
@@ -242,7 +294,7 @@ company: stripe.com → match → claim allowed
 - Clean spacing
 - Subtle borders
 - Minimal interactions
-- No heavy animations
+- Typography-driven design
 
 ---
 
@@ -250,17 +302,17 @@ company: stripe.com → match → claim allowed
 
 ### Data & Discovery
 - Search companies
+- Search users
 - Filters (industry, country)
-- Sorting
 
 ### Trust & Ownership
 - Domain verification (email confirmation)
-- Admin moderation
 - Verified badge
+- Admin moderation tools
 
 ### Product Expansion
 - Company dashboards
-- User profiles
+- Contribution tracking
 - External data enrichment (APIs)
 
 ---
@@ -268,11 +320,11 @@ company: stripe.com → match → claim allowed
 ## 📣 Instructions for AI (Cursor)
 
 - Always read this file before coding
-- Do not break existing working features
+- Do not break existing features
 - Keep UI consistent
 - Follow schema strictly
 - Avoid unnecessary complexity
-- Explain plan before major code generation
+- Explain plan before major changes
 ```
 
 ---
@@ -281,9 +333,9 @@ company: stripe.com → match → claim allowed
 
 You now have:
 
-* Claim system documented ✅
-* Auth methods updated ✅
-* Real project structure ✅
-* Future roadmap clarified ✅
+* Identity system documented ✅
+* Public profiles included ✅
+* Audit logs included ✅
+* Real product flow defined ✅
 
 ---
