@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import type { User } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
@@ -31,7 +32,7 @@ export default function CompanyDetailPage() {
   const params = useParams<{ id: string }>()
 
   const [company, setCompany] = useState<Company | null>(null)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -99,6 +100,7 @@ export default function CompanyDetailPage() {
         claim_status: 'claimed',
       })
       .eq('id', company.id)
+      .is('claimed_by', null)
 
     if (error) {
       alert(error.message)

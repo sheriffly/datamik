@@ -43,7 +43,7 @@ export default function CompaniesPage() {
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-black">
       <div className="mx-auto w-full max-w-4xl">
-        <div className="mb-8 flex items-end justify-between gap-4">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Companies</h1>
             <p className="mt-2 text-sm text-gray-500">
@@ -52,7 +52,7 @@ export default function CompaniesPage() {
           </div>
           <Link
             href="/add-company"
-            className="rounded-lg border border-black px-4 py-2 text-sm transition hover:bg-black hover:text-white"
+            className="rounded-lg border border-black px-4 py-2 text-center text-sm transition hover:bg-black hover:text-white"
           >
             Add Company
           </Link>
