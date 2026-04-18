@@ -24,6 +24,8 @@ type FormState = {
   name: string
   bio: string
   website_url: string
+  twitter_url: string
+  linkedin_url: string
 }
 
 export default function ProfilePage() {
@@ -34,6 +36,8 @@ export default function ProfilePage() {
     name: '',
     bio: '',
     website_url: '',
+    twitter_url: '',
+    linkedin_url: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -55,6 +59,9 @@ export default function ProfilePage() {
       setUserId(authData.user.id)
       setEmail(authData.user.email || '')
 
+      // Ensure profile row exists for the signed-in user.
+      await supabase.from('profiles').upsert({ id: authData.user.id }, { onConflict: 'id' })
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, name, bio, avatar_url, website_url, social_links')
@@ -70,6 +77,8 @@ export default function ProfilePage() {
           name: row.name || '',
           bio: row.bio || '',
           website_url: row.website_url || '',
+          twitter_url: row.social_links?.twitter || '',
+          linkedin_url: row.social_links?.linkedin || '',
         })
       }
 
@@ -113,7 +122,7 @@ export default function ProfilePage() {
     const { data: existing, error: existingError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('username', username)
+      .eq('username', username.toLowerCase())
       .neq('id', userId)
       .maybeSingle()
 
@@ -136,6 +145,10 @@ export default function ProfilePage() {
         name: form.name.trim() || null,
         bio: form.bio.trim() || null,
         website_url: websiteUrl || null,
+        social_links: {
+          twitter: form.twitter_url.trim() || null,
+          linkedin: form.linkedin_url.trim() || null,
+        },
       },
       { onConflict: 'id' }
     )
@@ -143,11 +156,21 @@ export default function ProfilePage() {
     setSaving(false)
 
     if (upsertError) {
+      if (upsertError?.code === '23505') {
+        setError('Username already taken.')
+        return
+      }
       setError(upsertError.message || 'Failed to save profile.')
       return
     }
 
-    setForm((prev) => ({ ...prev, username, website_url: websiteUrl }))
+    setForm((prev) => ({
+      ...prev,
+      username,
+      website_url: websiteUrl,
+      twitter_url: prev.twitter_url.trim(),
+      linkedin_url: prev.linkedin_url.trim(),
+    }))
     setSuccess('Profile saved.')
   }
 
@@ -261,6 +284,41 @@ export default function ProfilePage() {
                 className="w-full rounded-lg border border-black/20 px-4 py-2 text-sm outline-none transition focus:border-black focus-visible:ring-2 focus-visible:ring-black/20"
                 disabled={saving}
               />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="twitter_url" className="mb-2 block text-sm">
+                  Twitter
+                </label>
+                <input
+                  id="twitter_url"
+                  type="url"
+                  value={form.twitter_url}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, twitter_url: e.target.value }))
+                  }
+                  placeholder="https://x.com/username"
+                  className="w-full rounded-lg border border-black/20 px-4 py-2 text-sm outline-none transition focus:border-black focus-visible:ring-2 focus-visible:ring-black/20"
+                  disabled={saving}
+                />
+              </div>
+              <div>
+                <label htmlFor="linkedin_url" className="mb-2 block text-sm">
+                  LinkedIn
+                </label>
+                <input
+                  id="linkedin_url"
+                  type="url"
+                  value={form.linkedin_url}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, linkedin_url: e.target.value }))
+                  }
+                  placeholder="https://linkedin.com/in/username"
+                  className="w-full rounded-lg border border-black/20 px-4 py-2 text-sm outline-none transition focus:border-black focus-visible:ring-2 focus-visible:ring-black/20"
+                  disabled={saving}
+                />
+              </div>
             </div>
 
             {success && (

@@ -12,9 +12,30 @@ export default function Home() {
   const [isSendingEmailLink, setIsSendingEmailLink] = useState(false)
 
   useEffect(() => {
+    const ensureProfileExists = async (userId: string) => {
+      await supabase.from('profiles').upsert({ id: userId }, { onConflict: 'id' })
+    }
+
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
+      if (data.user?.id) {
+        ensureProfileExists(data.user.id)
+      }
     })
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        if (currentUser?.id) {
+          ensureProfileExists(currentUser.id)
+        }
+      }
+    )
+
+    return () => {
+      subscription.subscription.unsubscribe()
+    }
   }, [])
 
   const loginWithGoogle = async () => {

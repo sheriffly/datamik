@@ -37,7 +37,7 @@ export default function PublicProfilePage() {
       const { data, error: fetchError } = await supabase
         .from('profiles')
         .select('username, name, bio, avatar_url, website_url, social_links')
-        .eq('username', username)
+        .eq('username', username.toLowerCase())
         .maybeSingle()
 
       if (fetchError) {
@@ -55,12 +55,23 @@ export default function PublicProfilePage() {
   return (
     <main className="min-h-screen bg-white px-5 py-8 text-black sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
-        <Link
-          href="/"
-          className="mb-6 inline-block rounded-lg border border-black/20 px-4 py-2 text-sm transition hover:border-black hover:bg-black hover:text-white"
-        >
-          Back Home
-        </Link>
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500">Public profile</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href="/"
+              className="inline-block rounded-lg border border-black/20 px-4 py-2 text-center text-sm transition hover:border-black hover:bg-black hover:text-white"
+            >
+              Back Home
+            </Link>
+            <Link
+              href="/profile"
+              className="inline-block rounded-lg border border-black/20 px-4 py-2 text-center text-sm transition hover:border-black hover:bg-black hover:text-white"
+            >
+              Edit Profile
+            </Link>
+          </div>
+        </div>
 
         {loading && (
           <div className="rounded-xl border border-black/10 p-6 text-sm text-gray-500">
@@ -111,6 +122,31 @@ export default function PublicProfilePage() {
               >
                 {profile.website_url}
               </a>
+            )}
+
+            {(profile.social_links?.twitter || profile.social_links?.linkedin) && (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {profile.social_links?.twitter && (
+                  <a
+                    href={profile.social_links.twitter}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-block text-sm underline underline-offset-4"
+                  >
+                    Twitter
+                  </a>
+                )}
+                {profile.social_links?.linkedin && (
+                  <a
+                    href={profile.social_links.linkedin}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-block text-sm underline underline-offset-4"
+                  >
+                    LinkedIn
+                  </a>
+                )}
+              </div>
             )}
           </section>
         )}
